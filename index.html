@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#0b0b0f" />
+<title>链接解析下载</title>
+<style>
+  :root{
+    --bg:#0b0b0f;
+    --bg-2:#15151c;
+    --card:#1c1c24;
+    --line:rgba(255,255,255,.08);
+    --text:#f2f2f5;
+    --text-2:#9a9aa8;
+    --brand:#ff4d6d;
+    --brand-2:#ff8a5c;
+    --ok:#34c759;
+    --warn:#ffb020;
+    --radius:14px;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bot:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:15px;line-height:1.5;overflow-x:hidden}
+  body{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:calc(88px + var(--safe-bot))}
+
+  /* 顶部 */
+  .top{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,var(--bg) 0%,rgba(11,11,15,.92) 100%);
+    backdrop-filter:blur(10px);padding:calc(12px + var(--safe-top)) 16px 12px}
+  .top h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.3px}
+  .top p{margin:2px 0 0;font-size:12px;color:var(--text-2)}
+
+  /* 输入卡 */
+  .input-card{margin:12px 16px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:12px}
+  .input-row{display:flex;gap:8px;align-items:stretch}
+  textarea{flex:1;background:var(--bg-2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:10px 12px;font-size:14px;min-height:44px;max-height:120px;
+    resize:none;outline:none;font-family:inherit}
+  textarea:focus{border-color:var(--brand)}
+  .btn{border:none;border-radius:10px;padding:0 16px;font-size:14px;font-weight:600;
+    cursor:pointer;transition:transform .1s,opacity .2s;white-space:nowrap;color:#fff}
+  .btn:active{transform:scale(.96)}
+  .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));min-width:72px}
+  .btn-ghost{background:transparent;color:var(--text-2);border:1px solid var(--line)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .helpers{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .chip{font-size:12px;color:var(--text-2);background:var(--bg-2);border:1px solid var(--line);
+    border-radius:20px;padding:6px 10px;cursor:pointer}
+  .chip:active{background:#23232d}
+  .chip.on{color:var(--text);border-color:var(--brand)}
+
+  /* 平台支持 */
+  .platforms{display:flex;gap:6px;margin-top:10px;font-size:11px;color:var(--text-2)}
+  .platforms span{background:var(--bg-2);padding:3px 8px;border-radius:6px}
+
+  /* 状态 */
+  .status{margin:12px 16px;padding:12px;border-radius:10px;font-size:13px;display:none}
+  .status.show{display:block}
+  .status.loading{background:rgba(255,77,109,.08);color:var(--brand);border:1px solid rgba(255,77,109,.2)}
+  .status.err{background:rgba(255,176,32,.08);color:var(--warn);border:1px solid rgba(255,176,32,.25)}
+
+  /* 元信息 */
+  .meta{margin:12px 16px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:12px;display:none}
+  .meta.show{display:block}
+  .meta-row{display:flex;align-items:center;gap:10px}
+  .avatar{width:36px;height:36px;border-radius:50%;background:var(--bg-2);flex:none;
+    display:flex;align-items:center;justify-content:center;font-size:16px}
+  .meta-info{flex:1;min-width:0}
+  .meta-info .title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta-info .author{font-size:12px;color:var(--text-2);margin-top:2px}
+  .badge{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--brand);color:#fff}
+
+  /* 结果网格 */
+  .result{padding:0 16px}
+  .result-title{display:flex;justify-content:space-between;align-items:center;
+    margin:16px 0 10px;font-size:13px;color:var(--text-2)}
+  .result-title strong{color:var(--text);font-weight:600}
+
+  .media-item{margin-bottom:14px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;animation:fadeIn .3s ease both}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .media-wrap{position:relative;width:100%;background:#000;aspect-ratio:3/4;
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .media-wrap img,.media-wrap video{width:100%;height:100%;object-fit:contain;display:block}
+  .media-tag{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);color:#fff;
+    font-size:11px;padding:3px 8px;border-radius:4px;backdrop-filter:blur(6px)}
+  .media-index{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;
+    font-size:11px;padding:3px 8px;border-radius:4px;min-width:34px;text-align:center}
+
+  .media-actions{display:flex;padding:10px 12px;gap:8px;align-items:center}
+  .media-size{flex:1;font-size:12px;color:var(--text-2)}
+  .save-btn{background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;
+    border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;
+    display:flex;align-items:center;gap:4px;cursor:pointer}
+  .save-btn:active{transform:scale(.96)}
+  .save-btn.done{background:var(--ok)}
+  .save-btn.done::before{content:"✓ "}
+
+  /* 底部固定按钮 */
+  .footbar{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;
+    background:linear-gradient(180deg,rgba(11,11,15,0) 0%,rgba(11,11,15,.96) 30%);
+    padding:16px 16px calc(16px + var(--safe-bot));z-index:20;display:none}
+  .footbar.show{display:block}
+  .save-all{width:100%;height:52px;font-size:16px;font-weight:700;
+    background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;
+    border:none;border-radius:14px;cursor:pointer;
+    box-shadow:0 8px 24px rgba(255,77,109,.35)}
+  .save-all:active{transform:scale(.98)}
+  .save-all:disabled{opacity:.6}
+
+  /* 空态 */
+  .empty{text-align:center;padding:48px 24px;color:var(--text-2)}
+  .empty .icon{font-size:42px;margin-bottom:10px}
+  .empty .h{font-size:15px;color:var(--text);margin-bottom:4px}
+  .empty .s{font-size:12px;line-height:1.6}
+
+  /* toast */
+  .toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:rgba(0,0,0,.82);color:#fff;padding:12px 20px;border-radius:10px;
+    font-size:14px;z-index:999;pointer-events:none;opacity:0;transition:opacity .2s}
+  .toast.show{opacity:1}
+
+  /* iOS 长按提示 */
+  .tip-ios{margin:0 16px 12px;font-size:11px;color:var(--text-2);
+    background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.2);
+    border-radius:8px;padding:8px 10px;display:none}
+  .tip-ios.show{display:block}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>📥 一键解析下载</h1>
+</header>
+
+<section class="input-card">
+  <div class="input-row">
+    <textarea id="urlInput" placeholder="粘贴链接到这里，例如 https://www.xiaohongshu.com/..." autocomplete="off"></textarea>
+    <button class="btn btn-primary" id="parseBtn">解析</button>
+  </div>
+  <div class="helpers">
+    <span class="chip" id="pasteChip">📋 粘贴</span>
+    <span class="chip" id="clearChip">✕ 清空</span>
+  </div>
+</section>
+
+<div class="status" id="status"></div>
+<div class="tip-ios" id="iosTip">💡 iOS 用户：点击"保存"后，长按图片即可存入相册（H5 限制）</div>
+
+<section class="meta" id="meta">
+  <div class="meta-row">
+    <div class="avatar" id="metaAvatar">👤</div>
+    <div class="meta-info">
+      <div class="title" id="metaTitle"></div>
+      <div class="author" id="metaAuthor"></div>
+    </div>
+    <span class="badge" id="metaPlatform"></span>
+  </div>
+</section>
+
+<section class="result" id="result">
+  <div class="empty" id="empty">
+    <div class="icon">🔗</div>
+    <div class="h">还没有内容</div>
+    <div class="s">粘贴一条分享链接后点击「解析」<br/>原图 / 原视频无水印提取</div>
+  </div>
+</section>
+
+<div class="footbar" id="footbar">
+  <button class="save-all" id="saveAllBtn">⬇ 一键保存全部 (<span id="countTxt">0</span>)</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 工具 ============ */
+const $ = id=>document.getElementById(id);
+const toast = (msg,dur=1800)=>{
+  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),dur);
+};
+const showStatus=(msg,type='loading')=>{
+  const s=$('status');s.className='status show '+type;s.textContent=msg;
+};
+const hideStatus=()=>$('status').classList.remove('show');
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+/* ============ 解析（mock，真实需后端代理）============ */
+function detectPlatform(url){
+  if(/xiaohongshu\.com|xhslink\.com/i.test(url)) return {name:'小红书',icon:'📕',color:'#ff2741'};
+  if(/instagram\.com/i.test(url)) return {name:'Instagram',icon:'📷',color:'#e1306c'};
+  if(/twitter\.com|x\.com|t\.co/i.test(url)) return {name:'X',icon:'✖',color:'#000'};
+  if(/douyin\.com|v\.douyin/i.test(url)) return {name:'抖音',icon:'🎵',color:'#000'};
+  if(/weibo\.com|weibo\.cn/i.test(url)) return {name:'微博',icon:'🔴',color:'#e6162d'};
+  return null;
+}
+
+// 调用后端解析
+async function parseUrl(url){
+  const resp = await fetch('/api/parse',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url})
+  });
+  const json = await resp.json();
+  if(!json.ok) throw new Error(json.error || '解析失败');
+  return json.data;
+}
+
+/* ============ 渲染 ============ */
+let currentData = null;
+
+function render(data){
+  currentData = data;
+  $('empty').style.display='none';
+  const meta=$('meta');meta.classList.add('show');
+  $('metaTitle').textContent=data.title;
+  $('metaAuthor').textContent=data.author;
+  $('metaAvatar').textContent=data.avatar;
+  $('metaPlatform').textContent=data.platform.name;
+  $('metaPlatform').style.background=data.platform.color;
+
+  const box=$('result');
+  // 清掉旧 items，保留 empty
+  [...box.querySelectorAll('.media-item,.result-title')].forEach(n=>n.remove());
+
+  const titleDiv=document.createElement('div');
+  titleDiv.className='result-title';
+  const picNum = data.items.filter(i=>i.type==='image').length;
+  const vidNum = data.items.filter(i=>i.type==='video').length;
+  titleDiv.innerHTML = `<span>共 <strong>${data.items.length}</strong> 项：${picNum} 张图 ${vidNum>0?`· ${vidNum} 个视频`:''}</span>`;
+  box.appendChild(titleDiv);
+
+  data.items.forEach((it,idx)=>{
+    const div=document.createElement('div');
+    div.className='media-item';
+    const previewSrc = it.previewUrl || it.url;
+    const mediaEl = it.type==='video'
+      ? `<video src="${previewSrc}" poster="${it.cover||''}" controls playsinline preload="metadata"></video>
+         <span class="media-tag">🎬 视频</span>`
+      : `<img src="${previewSrc}" alt="" loading="lazy" />
+         <span class="media-tag">🖼 图片</span>`;
+    div.innerHTML = `
+      <div class="media-wrap">
+        ${mediaEl}
+        <span class="media-index">${idx+1}/${data.items.length}</span>
+      </div>
+      <div class="media-actions">
+        <span class="media-size">${it.filename}${it.size?' · '+it.size:''}</span>
+        <button class="save-btn" data-idx="${idx}">⬇ 保存</button>
+      </div>`;
+    box.appendChild(div);
+  });
+
+  // 绑定保存
+  box.querySelectorAll('.save-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=+btn.dataset.idx;
+      saveOne(data.items[i],btn);
+    });
+  });
+
+  $('countTxt').textContent=data.items.length;
+  $('footbar').classList.add('show');
+  if(isIOS) $('iosTip').classList.add('show');
+}
+
+/* ============ 保存 ============ */
+async function saveOne(item,btnEl){
+  try{
+    // 最佳方案：blob 下载，多数 Android 浏览器能直接存；iOS 会在新页打开让用户长按存
+    const a=document.createElement('a');
+    a.href=item.url;
+    a.download=item.filename;
+    a.rel='noopener';
+    // 尝试 blob（同源/CORS 通过时）
+    try{
+      const resp = await fetch(item.url,{mode:'cors'});
+      if(resp.ok){
+        const blob = await resp.blob();
+        const objUrl = URL.createObjectURL(blob);
+        a.href = objUrl;
+        document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(objUrl),5000);
+      }else{
+        document.body.appendChild(a);a.click();a.remove();
+      }
+    }catch(e){
+      document.body.appendChild(a);a.click();a.remove();
+    }
+    if(btnEl){btnEl.classList.add('done');btnEl.textContent='已保存';}
+    toast(isIOS?'已打开图片，请长按保存到相册':'已触发下载');
+  }catch(e){
+    toast('保存失败：'+e.message);
+  }
+}
+
+async function saveAll(){
+  if(!currentData) return;
+  const btn=$('saveAllBtn');btn.disabled=true;
+  const items = currentData.items;
+  for(let i=0;i<items.length;i++){
+    btn.textContent = `正在保存 ${i+1}/${items.length} ...`;
+    const cardBtn = document.querySelectorAll('.save-btn')[i];
+    await saveOne(items[i],cardBtn);
+    await new Promise(r=>setTimeout(r,500)); // 间隔，避免浏览器合并拦截
+  }
+  btn.innerHTML = `✓ 已全部触发 (${items.length})`;
+  setTimeout(()=>{
+    btn.disabled=false;
+    btn.innerHTML = `⬇ 一键保存全部 (<span id="countTxt">${items.length}</span>)`;
+  },2200);
+}
+
+/* ============ 事件 ============ */
+$('parseBtn').addEventListener('click',async ()=>{
+  const url = $('urlInput').value.trim();
+  if(!url){toast('请粘贴链接');return;}
+  if(!/^https?:\/\//i.test(url)){toast('链接格式不对');return;}
+  showStatus('🔍 正在解析链接，可能需要几秒...');
+  $('parseBtn').disabled=true;
+  try{
+    const data = await parseUrl(url);
+    hideStatus();
+    render(data);
+    toast(`解析成功 · ${data.items.length} 项`);
+  }catch(e){
+    showStatus('解析失败：'+e.message,'err');
+  }finally{
+    $('parseBtn').disabled=false;
+  }
+});
+
+$('pasteChip').addEventListener('click',async ()=>{
+  try{
+    const txt = await navigator.clipboard.readText();
+    $('urlInput').value = txt;
+    toast('已粘贴');
+  }catch{toast('需要手动粘贴（浏览器限制）');}
+});
+$('clearChip').addEventListener('click',()=>{$('urlInput').value='';$('urlInput').focus();});
+
+$('saveAllBtn').addEventListener('click',saveAll);
+
+// 自动粘贴检测
+$('urlInput').addEventListener('focus',async ()=>{
+  if($('urlInput').value) return;
+  try{
+    const txt = await navigator.clipboard.readText();
+    if(txt && /^https?:\/\//i.test(txt)){
+      // 不自动填，提示
+      toast('检测到剪贴板链接，点击📋粘贴');
+    }
+  }catch{}
+});
+</script>
+</body>
+</html>

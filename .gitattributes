@@ -1,0 +1,7 @@
+# 跨平台统一行尾
+* text=auto eol=lf
+
+# 明确二进制
+*.png binary
+*.jpg binary
+*.ico binary
